@@ -6,3 +6,4 @@ python-dotenv==1.2.2
 sqlparse==0.5.5
 tzdata==2026.1
 boto3==1.42.85
+gunicorn==25.3.0
