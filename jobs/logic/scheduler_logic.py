@@ -38,16 +38,12 @@ class OrphanEBSScope:
 
 
 def collect_active_financial_scopes() -> Iterable[FinancialScope]:
-    """
-    Placeholder inicial.
-    Luego esto debe salir de una tabla real de tenants/proyectos/áreas habilitadas.
-    """
     return [
         FinancialScope(
             tenant_id="tenant-demo",
-            company_id="company-demo",
+            company_id="company-001",
             scope_type="project",
-            scope_id="project-001",
+            scope_id="company-001-project-001",
         ),
     ]
 
