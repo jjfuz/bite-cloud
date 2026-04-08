@@ -33,8 +33,7 @@ DATABASES = {
         'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
-ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")# Build paths inside the project like this: BASE_DIR / 'subdir'.
 
 
 # Quick-start development settings - unsuitable for production
