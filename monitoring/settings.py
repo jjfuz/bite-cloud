@@ -143,24 +143,21 @@ RABBITMQ_CONFIG = {
     "RETRY_DELAY": int(os.getenv("RABBITMQ_RETRY_DELAY", "3")),
     "SOCKET_TIMEOUT": int(os.getenv("RABBITMQ_SOCKET_TIMEOUT", "5")),
 }
-
-AWS_CLOUD_CONFIG = {
-    "USE_IAM_ROLE": os.getenv("AWS_USE_IAM_ROLE", "True") == "True",
-    "ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
-    "SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-    "SESSION_TOKEN": os.getenv("AWS_SESSION_TOKEN", ""),
-    "REGION": os.getenv("AWS_REGION", "us-east-1"),
-    "CE_REGION": os.getenv("AWS_CE_REGION", "us-east-1"),
-    "EBS_MONTHLY_RATES": {
-        "gp3": float(os.getenv("AWS_EBS_RATE_GP3", "0.08")),
-        "gp2": float(os.getenv("AWS_EBS_RATE_GP2", "0.10")),
-        "io1": float(os.getenv("AWS_EBS_RATE_IO1", "0.125")),
-        "io2": float(os.getenv("AWS_EBS_RATE_IO2", "0.125")),
-        "st1": float(os.getenv("AWS_EBS_RATE_ST1", "0.045")),
-        "sc1": float(os.getenv("AWS_EBS_RATE_SC1", "0.025")),
-        "standard": float(os.getenv("AWS_EBS_RATE_STANDARD", "0.05")),
-    },
+CLOUD_EXPERIMENT_CONFIG = {
+    "ORPHAN_EBS_SOURCE": os.getenv("ORPHAN_EBS_SOURCE", "moto"),
+    "FINANCIAL_REPORT_SOURCE": os.getenv("FINANCIAL_REPORT_SOURCE", "internal_db"),
+    "AWS_REGION": os.getenv("AWS_REGION", "us-east-1"),
     "DEFAULT_CURRENCY": os.getenv("AWS_DEFAULT_CURRENCY", "USD"),
+
+    "MOTO_EBS_ORPHAN_COUNT": int(os.getenv("MOTO_EBS_ORPHAN_COUNT", "100")),
+    "MOTO_EBS_NOISE_COUNT": int(os.getenv("MOTO_EBS_NOISE_COUNT", "40")),
+    "MOTO_EBS_INSTANCE_COUNT": int(os.getenv("MOTO_EBS_INSTANCE_COUNT", "10")),
+
+    "EBS_MONTHLY_RATES": {
+        "gp2": float(os.getenv("AWS_EBS_RATE_GP2", "0.10")),
+        "gp3": float(os.getenv("AWS_EBS_RATE_GP3", "0.08")),
+        "io1": float(os.getenv("AWS_EBS_RATE_IO1", "0.125")),
+    },
 }
 
 

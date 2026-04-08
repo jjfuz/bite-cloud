@@ -1,12 +1,16 @@
-from calendar import monthrange
-from datetime import date
+from dateutil.parser import isoparse
+from django.conf import settings
 
 from cloud.logic.snapshot_writer_logic import (
     replace_financial_report_snapshot,
     replace_orphan_ebs_snapshot,
 )
-from cloud.services.aws_cost_service import get_monthly_financial_report
-from cloud.services.aws_ebs_service import list_orphan_ebs_for_project
+from cloud.services.internal_cost_service import (
+    build_monthly_financial_report_from_internal_data,
+)
+from cloud.services.moto_ebs_service import (
+    build_orphan_ebs_snapshot_from_moto,
+)
 
 
 class PermanentJobError(Exception):
@@ -15,20 +19,6 @@ class PermanentJobError(Exception):
 
 class TransientJobError(Exception):
     pass
-
-
-def _resolve_month_range(period_year: int, period_month: int) -> tuple[str, str]:
-    start_date = date(period_year, period_month, 1)
-    _, last_day = monthrange(period_year, period_month)
-    end_date = date(period_year, period_month, last_day)
-
-    # Cost Explorer usa TimePeriod end como exclusivo; pasamos primer día del siguiente mes.
-    if period_month == 12:
-        next_month = date(period_year + 1, 1, 1)
-    else:
-        next_month = date(period_year, period_month + 1, 1)
-
-    return start_date.isoformat(), next_month.isoformat()
 
 
 def handle_financial_report_job(payload: dict) -> None:
@@ -42,19 +32,23 @@ def handle_financial_report_job(payload: dict) -> None:
     except KeyError as exc:
         raise PermanentJobError(f"Payload financiero inválido. Falta el campo {exc}.") from exc
 
-    period_start, period_end = _resolve_month_range(
-        period_year=period_year,
-        period_month=period_month,
-    )
+    source_mode = settings.CLOUD_EXPERIMENT_CONFIG["FINANCIAL_REPORT_SOURCE"]
 
-    project_id = scope_id if scope_type == "project" else None
+    if source_mode != "internal_db":
+        raise PermanentJobError(
+            f"Modo financiero no soportado para este experimento: {source_mode}"
+        )
 
     try:
-        result = get_monthly_financial_report(
-            period_start=period_start,
-            period_end=period_end,
-            project_id=project_id,
+        result = build_monthly_financial_report_from_internal_data(
+            tenant_id=tenant_id,
+            company_id=company_id,
+            scope_type=scope_type,
+            scope_id=scope_id,
+            period_year=period_year,
+            period_month=period_month,
         )
+
         replace_financial_report_snapshot(
             tenant_id=tenant_id,
             company_id=company_id,
@@ -68,20 +62,29 @@ def handle_financial_report_job(payload: dict) -> None:
         raise TransientJobError("Falló la generación del snapshot financiero.") from exc
 
 
-def handle_orphan_ebs_job(payload: dict, region: str) -> None:
+def handle_orphan_ebs_job(payload: dict) -> None:
     try:
         tenant_id = payload["tenant_id"]
         company_id = payload["company_id"]
         project_id = payload["project_id"]
-        snapshot_date = date.fromisoformat(payload["snapshot_date"])
+        snapshot_date = isoparse(payload["snapshot_date"]).date()
     except KeyError as exc:
         raise PermanentJobError(f"Payload orphan EBS inválido. Falta el campo {exc}.") from exc
 
+    source_mode = settings.CLOUD_EXPERIMENT_CONFIG["ORPHAN_EBS_SOURCE"]
+    region = settings.CLOUD_EXPERIMENT_CONFIG["AWS_REGION"]
+
+    if source_mode != "moto":
+        raise PermanentJobError(
+            f"Modo orphan EBS no soportado para este experimento: {source_mode}"
+        )
+
     try:
-        records = list_orphan_ebs_for_project(
+        records = build_orphan_ebs_snapshot_from_moto(
             project_id=project_id,
             region=region,
         )
+
         replace_orphan_ebs_snapshot(
             tenant_id=tenant_id,
             company_id=company_id,
@@ -91,4 +94,7 @@ def handle_orphan_ebs_job(payload: dict, region: str) -> None:
             records=records,
         )
     except Exception as exc:
-        raise TransientJobError("Falló la generación del snapshot de volúmenes EBS huérfanos.") from exc
+        raise TransientJobError(
+            f"Falló la generación del snapshot de volúmenes EBS huérfanos. "
+            f"Causa original: {type(exc).__name__}: {exc}"
+        ) from exc

@@ -2,7 +2,6 @@ import json
 import logging
 
 import pika
-from django.conf import settings
 
 from cloud.logic.job_handlers import (
     PermanentJobError,
@@ -28,14 +27,13 @@ logger = logging.getLogger(__name__)
 
 def _dispatch_payload(payload: dict) -> None:
     job_type = payload["job_type"]
-    region = settings.AWS_CLOUD_CONFIG["REGION"]
 
     if job_type == ScheduledJobExecution.JOB_REFRESH_FINANCIAL_REPORT:
         handle_financial_report_job(payload)
         return
 
     if job_type == ScheduledJobExecution.JOB_REFRESH_ORPHAN_EBS:
-        handle_orphan_ebs_job(payload, region=region)
+        handle_orphan_ebs_job(payload)
         return
 
     raise PermanentJobError(f"Tipo de job no soportado: {job_type}")
