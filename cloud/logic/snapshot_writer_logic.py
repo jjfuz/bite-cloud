@@ -49,16 +49,6 @@ def replace_financial_report_snapshot(
     period_month: int,
     result: FinancialReportResult,
 ) -> FinancialReportSnapshot:
-    FinancialReportSnapshot.objects.filter(
-        tenant_id=tenant_id,
-        scope_type=scope_type,
-        scope_id=scope_id,
-        period_year=period_year,
-        period_month=period_month,
-        report_type=FinancialReportSnapshot.REPORT_TYPE_MONTHLY,
-        is_current=True,
-    ).update(is_current=False)
-
     payload = {
         "breakdown": [
             {
@@ -70,20 +60,58 @@ def replace_financial_report_snapshot(
         "raw_payload": _to_json_serializable(result.raw_payload),
     }
 
-    snapshot = FinancialReportSnapshot.objects.create(
+    snapshot = FinancialReportSnapshot.objects.filter(
         tenant_id=tenant_id,
-        company_id=company_id,
         scope_type=scope_type,
         scope_id=scope_id,
         period_year=period_year,
         period_month=period_month,
         report_type=FinancialReportSnapshot.REPORT_TYPE_MONTHLY,
-        currency=result.currency,
-        total_cost=result.total_cost,
-        report_payload=payload,
-        generated_at=timezone.now(),
-        is_current=True,
+    ).order_by("-generated_at").first()
+
+    if snapshot is None:
+        snapshot = FinancialReportSnapshot.objects.create(
+            tenant_id=tenant_id,
+            company_id=company_id,
+            scope_type=scope_type,
+            scope_id=scope_id,
+            period_year=period_year,
+            period_month=period_month,
+            report_type=FinancialReportSnapshot.REPORT_TYPE_MONTHLY,
+            currency=result.currency,
+            total_cost=result.total_cost,
+            report_payload=payload,
+            generated_at=timezone.now(),
+            is_current=True,
+        )
+        return snapshot
+
+    snapshot.company_id = company_id
+    snapshot.currency = result.currency
+    snapshot.total_cost = result.total_cost
+    snapshot.report_payload = payload
+    snapshot.generated_at = timezone.now()
+    snapshot.is_current = True
+    snapshot.save(
+        update_fields=[
+            "company_id",
+            "currency",
+            "total_cost",
+            "report_payload",
+            "generated_at",
+            "is_current",
+            "updated_at",
+        ]
     )
+
+    FinancialReportSnapshot.objects.filter(
+        tenant_id=tenant_id,
+        scope_type=scope_type,
+        scope_id=scope_id,
+        period_year=period_year,
+        period_month=period_month,
+        report_type=FinancialReportSnapshot.REPORT_TYPE_MONTHLY,
+    ).exclude(id=snapshot.id).update(is_current=False)
 
     return snapshot
 
