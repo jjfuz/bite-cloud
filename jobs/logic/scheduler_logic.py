@@ -40,19 +40,26 @@ class OrphanEBSScope:
 
 
 def collect_active_financial_scopes() -> Iterable[FinancialScope]:
-    return [
-        FinancialScope(
-            tenant_id="tenant-demo",
-            company_id="company-001",
-            scope_type="project",
-            scope_id="company-001-project-001",
-        ),
-    ]
+    scopes = []
+
+    for company_number in range(1, 40):  # 40 scopes financieros
+        company_id = f"company-{company_number:03d}"
+        scopes.append(
+            FinancialScope(
+                tenant_id="tenant-demo",
+                company_id=company_id,
+                scope_type="project",
+                scope_id=f"{company_id}-project-001",
+            )
+        )
+
+    return scopes
+
 
 def collect_active_orphan_ebs_scopes() -> Iterable[OrphanEBSScope]:
     scopes = []
 
-    for company_number in range(1, 21):
+    for company_number in range(1, 40):
         company_id = f"company-{company_number:03d}"
         scopes.append(
             OrphanEBSScope(
