@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.urls import include, path
+from jobs.views import job_detail_api
 
 from common.views import (
     dashboard_view,
@@ -25,4 +26,6 @@ urlpatterns = [
         orphan_report_detail_view,
         name="orphan-report-detail",
     ),
+    path("api/jobs/<int:job_id>/", job_detail_api, name="job-detail-api"),
+
 ]
