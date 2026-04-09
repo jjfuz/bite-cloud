@@ -1,0 +1,58 @@
+{% extends "common/base.html" %}
+
+{% block title %}Orphan EBS Report Detail | BITE Cloud{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">Orphan EBS Report Detail</h2>
+
+    <div class="detail-grid">
+        <div class="detail-block">
+            <div class="kv">
+                <div>Tenant</div><div>{{ sample_row.tenant_id }}</div>
+                <div>Company</div><div>{{ sample_row.company_id }}</div>
+                <div>Project</div><div>{{ sample_row.project_id }}</div>
+                <div>Snapshot Date</div><div>{{ sample_row.snapshot_date }}</div>
+                <div>Generated At</div><div>{{ sample_row.generated_at }}</div>
+                <div>Total Volumes</div><div>{{ total_orphan_volumes }}</div>
+            </div>
+        </div>
+
+        <div class="detail-block">
+            <p class="muted">
+                Este detalle agrupa todos los volúmenes huérfanos del mismo reporte materializado.
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card" style="margin-top:16px;">
+    <h2 class="section-title">Items</h2>
+    <div class="stack">
+        {% for item in items %}
+        <div class="detail-block">
+            <div class="kv">
+                <div>Ranking</div><div>{{ item.ranking_position }}</div>
+                <div>Volume ID</div><div>{{ item.volume_id }}</div>
+                <div>Name</div><div>{{ item.volume_name|default:"-" }}</div>
+                <div>Region</div><div>{{ item.region }}</div>
+                <div>Volume Type</div><div>{{ item.volume_type }}</div>
+                <div>Size (GiB)</div><div>{{ item.size_gib }}</div>
+                <div>Monthly Cost</div><div>{{ item.monthly_cost }} {{ item.currency }}</div>
+            </div>
+
+            <details style="margin-top:14px;">
+                <summary>Ver detalles completos del volumen</summary>
+                <div style="margin-top:12px;">
+                    <pre>{{ item.details_pretty }}</pre>
+                </div>
+            </details>
+        </div>
+        {% empty %}
+        <div class="detail-block">
+            No orphan EBS items found.
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

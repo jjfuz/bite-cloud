@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from typing import Iterable
 
 from django.utils import timezone
@@ -16,10 +16,12 @@ from jobs.logic.job_registry_logic import (
     mark_job_failed,
     mark_job_queued,
 )
-from jobs.logic.scheduler_lock_logic import acquire_scheduler_lock, release_scheduler_lock
 from reports.models import FinancialReportSnapshot, OrphanEBSSnapshot
 
 logger = logging.getLogger(__name__)
+
+FINANCIAL_REFRESH_MAX_AGE_SECONDS = 30
+ORPHAN_EBS_REFRESH_MAX_AGE_SECONDS = 30
 
 
 @dataclass(frozen=True)
@@ -47,7 +49,6 @@ def collect_active_financial_scopes() -> Iterable[FinancialScope]:
         ),
     ]
 
-
 def collect_active_orphan_ebs_scopes() -> Iterable[OrphanEBSScope]:
     return [
         OrphanEBSScope(
@@ -57,15 +58,15 @@ def collect_active_orphan_ebs_scopes() -> Iterable[OrphanEBSScope]:
         ),
     ]
 
-
-def financial_snapshot_is_current(
+def financial_snapshot_needs_refresh(
     tenant_id: str,
     scope_type: str,
     scope_id: str,
     period_year: int,
     period_month: int,
+    max_age_seconds: int,
 ) -> bool:
-    return FinancialReportSnapshot.objects.filter(
+    snapshot = FinancialReportSnapshot.objects.filter(
         tenant_id=tenant_id,
         scope_type=scope_type,
         scope_id=scope_id,
@@ -73,24 +74,41 @@ def financial_snapshot_is_current(
         period_month=period_month,
         report_type=FinancialReportSnapshot.REPORT_TYPE_MONTHLY,
         is_current=True,
-    ).exists()
+    ).order_by("-generated_at").first()
+
+    if snapshot is None:
+        return True
+
+    age = timezone.now() - snapshot.generated_at
+    return age > timedelta(seconds=max_age_seconds)
 
 
-def orphan_ebs_snapshot_exists(
+def orphan_ebs_snapshot_needs_refresh(
     tenant_id: str,
     company_id: str,
     project_id: str,
     snapshot_date: date,
+    max_age_seconds: int,
 ) -> bool:
-    return OrphanEBSSnapshot.objects.filter(
+    snapshot = OrphanEBSSnapshot.objects.filter(
         tenant_id=tenant_id,
         company_id=company_id,
         project_id=project_id,
         snapshot_date=snapshot_date,
-    ).exists()
+    ).order_by("-generated_at").first()
+
+    if snapshot is None:
+        return True
+
+    age = timezone.now() - snapshot.generated_at
+    return age > timedelta(seconds=max_age_seconds)
 
 
-def enqueue_financial_report_refresh(scope: FinancialScope, period_year: int, period_month: int) -> None:
+def enqueue_financial_report_refresh(
+    scope: FinancialScope,
+    period_year: int,
+    period_month: int,
+) -> None:
     payload = build_financial_report_refresh_payload(
         tenant_id=scope.tenant_id,
         company_id=scope.company_id,
@@ -101,7 +119,10 @@ def enqueue_financial_report_refresh(scope: FinancialScope, period_year: int, pe
     )
 
     if job_already_open(payload["job_key"]):
-        logger.info("Skipping duplicated financial job job_key=%s", payload["job_key"])
+        logger.info(
+            "Skipping duplicated financial job because another one is still open. job_key=%s",
+            payload["job_key"],
+        )
         return
 
     job = create_pending_job(payload)
@@ -109,7 +130,9 @@ def enqueue_financial_report_refresh(scope: FinancialScope, period_year: int, pe
     try:
         broker_message_id = publish_job(payload)
         mark_job_queued(job, broker_message_id=broker_message_id)
+        logger.info("Financial refresh job queued successfully. job_key=%s", payload["job_key"])
     except BrokerPublisherError as exc:
+        logger.exception("Failed to queue financial refresh job. job_key=%s", payload["job_key"])
         mark_job_failed(job, str(exc))
 
 
@@ -122,7 +145,10 @@ def enqueue_orphan_ebs_refresh(scope: OrphanEBSScope, snapshot_date: date) -> No
     )
 
     if job_already_open(payload["job_key"]):
-        logger.info("Skipping duplicated orphan EBS job job_key=%s", payload["job_key"])
+        logger.info(
+            "Skipping duplicated orphan EBS job because another one is still open. job_key=%s",
+            payload["job_key"],
+        )
         return
 
     job = create_pending_job(payload)
@@ -130,45 +156,74 @@ def enqueue_orphan_ebs_refresh(scope: OrphanEBSScope, snapshot_date: date) -> No
     try:
         broker_message_id = publish_job(payload)
         mark_job_queued(job, broker_message_id=broker_message_id)
+        logger.info("Orphan EBS refresh job queued successfully. job_key=%s", payload["job_key"])
     except BrokerPublisherError as exc:
+        logger.exception("Failed to queue orphan EBS refresh job. job_key=%s", payload["job_key"])
         mark_job_failed(job, str(exc))
 
 
-def run_scheduler_cycle(lock_name: str = "global_scheduler_lock", locked_by: str = "scheduler-node") -> None:
-    acquired = acquire_scheduler_lock(lock_name=lock_name, locked_by=locked_by)
+def run_scheduler_cycle() -> None:
+    now = timezone.now()
+    current_year = now.year
+    current_month = now.month
+    today = now.date()
 
-    if not acquired:
-        logger.info("Scheduler lock not acquired. Another node is leading this cycle.")
-        return
+    logger.info(
+        "Starting scheduler cycle for period=%s-%s and snapshot_date=%s",
+        current_year,
+        current_month,
+        today,
+    )
 
-    try:
-        now = timezone.now()
-        current_year = now.year
-        current_month = now.month
-        today = now.date()
-
-        for scope in collect_active_financial_scopes():
-            if not financial_snapshot_is_current(
-                tenant_id=scope.tenant_id,
-                scope_type=scope.scope_type,
-                scope_id=scope.scope_id,
+    for scope in collect_active_financial_scopes():
+        if financial_snapshot_needs_refresh(
+            tenant_id=scope.tenant_id,
+            scope_type=scope.scope_type,
+            scope_id=scope.scope_id,
+            period_year=current_year,
+            period_month=current_month,
+            max_age_seconds=FINANCIAL_REFRESH_MAX_AGE_SECONDS,
+        ):
+            logger.info(
+                "Financial snapshot needs refresh. tenant_id=%s scope_type=%s scope_id=%s",
+                scope.tenant_id,
+                scope.scope_type,
+                scope.scope_id,
+            )
+            enqueue_financial_report_refresh(
+                scope=scope,
                 period_year=current_year,
                 period_month=current_month,
-            ):
-                enqueue_financial_report_refresh(
-                    scope=scope,
-                    period_year=current_year,
-                    period_month=current_month,
-                )
+            )
+        else:
+            logger.info(
+                "Financial snapshot is still fresh. tenant_id=%s scope_type=%s scope_id=%s",
+                scope.tenant_id,
+                scope.scope_type,
+                scope.scope_id,
+            )
 
-        for scope in collect_active_orphan_ebs_scopes():
-            if not orphan_ebs_snapshot_exists(
-                tenant_id=scope.tenant_id,
-                company_id=scope.company_id,
-                project_id=scope.project_id,
-                snapshot_date=today,
-            ):
-                enqueue_orphan_ebs_refresh(scope=scope, snapshot_date=today)
+    for scope in collect_active_orphan_ebs_scopes():
+        if orphan_ebs_snapshot_needs_refresh(
+            tenant_id=scope.tenant_id,
+            company_id=scope.company_id,
+            project_id=scope.project_id,
+            snapshot_date=today,
+            max_age_seconds=ORPHAN_EBS_REFRESH_MAX_AGE_SECONDS,
+        ):
+            logger.info(
+                "Orphan EBS snapshot needs refresh. tenant_id=%s company_id=%s project_id=%s",
+                scope.tenant_id,
+                scope.company_id,
+                scope.project_id,
+            )
+            enqueue_orphan_ebs_refresh(scope=scope, snapshot_date=today)
+        else:
+            logger.info(
+                "Orphan EBS snapshot is still fresh. tenant_id=%s company_id=%s project_id=%s",
+                scope.tenant_id,
+                scope.company_id,
+                scope.project_id,
+            )
 
-    finally:
-        release_scheduler_lock(lock_name=lock_name, locked_by=locked_by)
+    logger.info("Scheduler cycle finished successfully.")

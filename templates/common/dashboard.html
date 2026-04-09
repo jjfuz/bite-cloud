@@ -1,0 +1,147 @@
+{% extends "common/base.html" %}
+
+{% block title %}Dashboard | BITE Cloud{% endblock %}
+
+{% block content %}
+<div class="metric-grid">
+    <div class="card">
+        <div class="metric-title">Total Jobs</div>
+        <div class="metric-value">{{ total_jobs }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Open Jobs</div>
+        <div class="metric-value">{{ open_jobs }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Succeeded Jobs</div>
+        <div class="metric-value">{{ succeeded_jobs }}</div>
+    </div>
+    <div class="card">
+        <div class="metric-title">Failed Jobs</div>
+        <div class="metric-value">{{ failed_jobs }}</div>
+    </div>
+</div>
+
+<div class="section-grid">
+    <div class="card">
+        <h2 class="section-title">Recent Jobs</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Job Key</th>
+                    <th>Updated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for job in recent_jobs %}
+                <tr>
+                    <td>{{ job.job_type }}</td>
+                    <td>
+                        {% if job.status == "SUCCEEDED" %}
+                            <span class="badge ok">{{ job.status }}</span>
+                        {% elif job.status == "FAILED" %}
+                            <span class="badge bad">{{ job.status }}</span>
+                        {% else %}
+                            <span class="badge warn">{{ job.status }}</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ job.job_key }}</td>
+                    <td>{{ job.updated_at }}</td>
+                    <td><a class="table-link" href="/dashboard/jobs/{{ job.id }}/">Ver detalle</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No hay jobs recientes.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Quick Access</h2>
+        <div class="stack">
+            <div class="link-row">
+                <a href="{{ sample_financial_url }}">Endpoint financiero de prueba</a>
+            </div>
+            <div class="link-row">
+                <a href="{{ sample_orphan_url }}">Endpoint orphan EBS de prueba</a>
+            </div>
+            <div class="link-row">
+                <a href="/admin/jobs/scheduledjobexecution/">Admin Jobs</a>
+            </div>
+            <div class="link-row">
+                <a href="/admin/reports/financialreportsnapshot/">Admin Financial Snapshots</a>
+            </div>
+            <div class="link-row">
+                <a href="/admin/reports/orphanebssnapshot/">Admin Orphan EBS Snapshots</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section-grid">
+    <div class="card">
+        <h2 class="section-title">Recent Financial Snapshots</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Scope</th>
+                    <th>Period</th>
+                    <th>Total</th>
+                    <th>Generated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for snapshot in latest_financial_snapshots %}
+                <tr>
+                    <td>{{ snapshot.scope_type }} / {{ snapshot.scope_id }}</td>
+                    <td>{{ snapshot.period_year }}-{{ snapshot.period_month }}</td>
+                    <td>{{ snapshot.total_cost }} {{ snapshot.currency }}</td>
+                    <td>{{ snapshot.generated_at }}</td>
+                    <td><a class="table-link" href="/dashboard/financial-snapshots/{{ snapshot.id }}/">Ver detalle</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No hay snapshots financieros recientes.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Recent Orphan EBS Reports</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Project</th>
+                    <th>Date</th>
+                    <th>Volumes</th>
+                    <th>Max Cost</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in latest_orphan_reports %}
+                <tr>
+                    <td>{{ report.project_id }}</td>
+                    <td>{{ report.snapshot_date }}</td>
+                    <td>{{ report.total_orphan_volumes }}</td>
+                    <td>{{ report.max_monthly_cost }}</td>
+                    <td><a class="table-link" href="/dashboard/orphan-ebs-reports/{{ report.sample_row_id }}/">Ver detalle</a></td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">No hay reportes orphan EBS recientes.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,3 @@
-
-
-
-
 """
 Django settings for monitoring project.
 
@@ -19,114 +15,98 @@ import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-dev')
-DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('DB_NAME'),
-        'USER': os.getenv('DB_USER'),
-        'PASSWORD': os.getenv('DB_PASSWORD'),
-        'HOST': os.getenv('DB_HOST', '127.0.0.1'),
-        'PORT': os.getenv('DB_PORT', '5432'),
-    }
-}
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")# Build paths inside the project like this: BASE_DIR / 'subdir'.
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-
-# SECURITY WARNING: don't run with debug turned on in production!
-
-# Application definition
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev")
+DEBUG = os.getenv("DEBUG", "False") == "True"
+ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-
-    'reports',
-    'jobs',
-    'cloud',
-    'common',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "reports",
+    "jobs",
+    "cloud",
+    "common",
 ]
+
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = 'monitoring.urls'
+ROOT_URLCONF = "monitoring.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [BASE_DIR / "templates"],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'monitoring.wsgi.application'
+WSGI_APPLICATION = "monitoring.wsgi.application"
 
-
-# Database
-# https://docs.djangoproject.com/en/6.0/ref/settings/#databases
-
-# Password validation
-# https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST", "127.0.0.1"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
-
-# Internationalization
-# https://docs.djangoproject.com/en/6.0/topics/i18n/
-
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
+LANGUAGE_CODE = "en-us"
+TIME_ZONE = "UTC"
 USE_I18N = True
-
 USE_TZ = True
 
+STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/6.0/howto/static-files/
-
-STATIC_URL = 'static/'
-
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 RABBITMQ_CONFIG = {
     "HOST": os.getenv("RABBITMQ_HOST", "127.0.0.1"),
@@ -143,16 +123,15 @@ RABBITMQ_CONFIG = {
     "RETRY_DELAY": int(os.getenv("RABBITMQ_RETRY_DELAY", "3")),
     "SOCKET_TIMEOUT": int(os.getenv("RABBITMQ_SOCKET_TIMEOUT", "5")),
 }
+
 CLOUD_EXPERIMENT_CONFIG = {
     "ORPHAN_EBS_SOURCE": os.getenv("ORPHAN_EBS_SOURCE", "moto"),
     "FINANCIAL_REPORT_SOURCE": os.getenv("FINANCIAL_REPORT_SOURCE", "internal_db"),
     "AWS_REGION": os.getenv("AWS_REGION", "us-east-1"),
     "DEFAULT_CURRENCY": os.getenv("AWS_DEFAULT_CURRENCY", "USD"),
-
     "MOTO_EBS_ORPHAN_COUNT": int(os.getenv("MOTO_EBS_ORPHAN_COUNT", "100")),
     "MOTO_EBS_NOISE_COUNT": int(os.getenv("MOTO_EBS_NOISE_COUNT", "40")),
     "MOTO_EBS_INSTANCE_COUNT": int(os.getenv("MOTO_EBS_INSTANCE_COUNT", "10")),
-
     "EBS_MONTHLY_RATES": {
         "gp2": float(os.getenv("AWS_EBS_RATE_GP2", "0.10")),
         "gp3": float(os.getenv("AWS_EBS_RATE_GP3", "0.08")),
@@ -160,6 +139,7 @@ CLOUD_EXPERIMENT_CONFIG = {
     },
 }
 
-
 USE_FAKE_BROKER = os.getenv("USE_FAKE_BROKER", "False") == "True"
 USE_FAKE_CLOUD_DATA = os.getenv("USE_FAKE_CLOUD_DATA", "False") == "True"
+
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

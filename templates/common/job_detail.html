@@ -1,0 +1,47 @@
+{% extends "common/base.html" %}
+
+{% block title %}Job Detail | BITE Cloud{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">Job Detail</h2>
+
+    <div class="detail-grid">
+        <div class="detail-block">
+            <div class="kv">
+                <div>ID</div><div>{{ job.id }}</div>
+                <div>Job Type</div><div>{{ job.job_type }}</div>
+                <div>Status</div>
+                <div>
+                    {% if job.status == "SUCCEEDED" %}
+                        <span class="badge ok">{{ job.status }}</span>
+                    {% elif job.status == "FAILED" %}
+                        <span class="badge bad">{{ job.status }}</span>
+                    {% else %}
+                        <span class="badge warn">{{ job.status }}</span>
+                    {% endif %}
+                </div>
+                <div>Job Key</div><div>{{ job.job_key }}</div>
+                <div>Tenant</div><div>{{ job.tenant_id }}</div>
+                <div>Company</div><div>{{ job.company_id }}</div>
+                <div>Scope Type</div><div>{{ job.scope_type }}</div>
+                <div>Scope ID</div><div>{{ job.scope_id }}</div>
+                <div>Project ID</div><div>{{ job.project_id }}</div>
+                <div>Priority</div><div>{{ job.priority }}</div>
+                <div>Requested</div><div>{{ job.requested_at }}</div>
+                <div>Queued</div><div>{{ job.queued_at }}</div>
+                <div>Started</div><div>{{ job.started_at }}</div>
+                <div>Finished</div><div>{{ job.finished_at }}</div>
+                <div>Updated</div><div>{{ job.updated_at }}</div>
+                <div>Broker Message ID</div><div>{{ job.broker_message_id }}</div>
+                <div>Error Message</div><div>{{ job.error_message|default:"-" }}</div>
+            </div>
+        </div>
+
+        <div class="detail-block">
+            <h3 class="section-title">Payload</h3>
+            <pre>{{ payload_pretty }}</pre>
+        </div>
+    </div>
+</div>
+{% endblock %}

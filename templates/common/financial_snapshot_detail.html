@@ -1,0 +1,62 @@
+{% extends "common/base.html" %}
+
+{% block title %}Financial Snapshot Detail | BITE Cloud{% endblock %}
+
+{% block content %}
+<div class="card">
+    <h2 class="section-title">Financial Snapshot Detail</h2>
+
+    <div class="detail-grid">
+        <div class="detail-block">
+            <div class="kv">
+                <div>ID</div><div>{{ snapshot.id }}</div>
+                <div>Tenant</div><div>{{ snapshot.tenant_id }}</div>
+                <div>Company</div><div>{{ snapshot.company_id }}</div>
+                <div>Scope Type</div><div>{{ snapshot.scope_type }}</div>
+                <div>Scope ID</div><div>{{ snapshot.scope_id }}</div>
+                <div>Period</div><div>{{ snapshot.period_year }}-{{ snapshot.period_month }}</div>
+                <div>Report Type</div><div>{{ snapshot.report_type }}</div>
+                <div>Total Cost</div><div>{{ snapshot.total_cost }} {{ snapshot.currency }}</div>
+                <div>Is Current</div><div>{{ snapshot.is_current }}</div>
+                <div>Generated At</div><div>{{ snapshot.generated_at }}</div>
+            </div>
+        </div>
+
+        <div class="detail-block">
+            <h3 class="section-title">Breakdown</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Service</th>
+                        <th>Cost</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in breakdown %}
+                    <tr>
+                        <td>{{ item.service }}</td>
+                        <td>{{ item.cost }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="2">No breakdown entries.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="section-grid">
+    <div class="card">
+        <h2 class="section-title">Raw Payload</h2>
+        <pre>{{ raw_payload_pretty }}</pre>
+    </div>
+
+    <div class="card">
+        <h2 class="section-title">Full Stored Payload</h2>
+        <pre>{{ full_payload_pretty }}</pre>
+    </div>
+</div>
+{% endblock %}
