@@ -59,8 +59,10 @@ def handle_financial_report_job(payload: dict) -> None:
             result=result,
         )
     except Exception as exc:
-        raise TransientJobError("Falló la generación del snapshot financiero.") from exc
-
+        raise TransientJobError(
+            f"Falló la generación del snapshot financiero. "
+            f"Causa original: {type(exc).__name__}: {exc}"
+        ) from exc
 
 def handle_orphan_ebs_job(payload: dict) -> None:
     try:
