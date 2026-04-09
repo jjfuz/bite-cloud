@@ -129,8 +129,8 @@ CLOUD_EXPERIMENT_CONFIG = {
     "FINANCIAL_REPORT_SOURCE": os.getenv("FINANCIAL_REPORT_SOURCE", "internal_db"),
     "AWS_REGION": os.getenv("AWS_REGION", "us-east-1"),
     "DEFAULT_CURRENCY": os.getenv("AWS_DEFAULT_CURRENCY", "USD"),
-    "MOTO_EBS_ORPHAN_COUNT": int(os.getenv("MOTO_EBS_ORPHAN_COUNT", "100")),
-    "MOTO_EBS_NOISE_COUNT": int(os.getenv("MOTO_EBS_NOISE_COUNT", "40")),
+    "MOTO_EBS_ORPHAN_COUNT": int(os.getenv("MOTO_EBS_ORPHAN_COUNT", "30")),
+    "MOTO_EBS_NOISE_COUNT": int(os.getenv("MOTO_EBS_NOISE_COUNT", "10")),
     "MOTO_EBS_INSTANCE_COUNT": int(os.getenv("MOTO_EBS_INSTANCE_COUNT", "10")),
     "EBS_MONTHLY_RATES": {
         "gp2": float(os.getenv("AWS_EBS_RATE_GP2", "0.10")),
