@@ -13,7 +13,9 @@ urlpatterns = [
     path("", dashboard_view, name="dashboard"),
     path("health/", health_view, name="health"),
     path("admin/", admin.site.urls),
-    path("reports/", include("reports.urls")),
+    path("reports/", include("reports.urls")), ### ESTOS SON LOS ENDPOINTS JSON 
+    
+    ### ESTO IGNORAR ES PARA EL RENDER DE LA DASHBOARD, NO SON ENDPOINTS JSON
     path("dashboard/jobs/<int:job_id>/", job_detail_view, name="job-detail"),
     path(
         "dashboard/financial-snapshots/<int:snapshot_id>/",

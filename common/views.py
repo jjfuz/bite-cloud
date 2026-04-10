@@ -46,6 +46,17 @@ def dashboard_view(request):
 
     recent_jobs = ScheduledJobExecution.objects.order_by("-updated_at")[:15]
 
+    latest_orphan_report = latest_orphan_reports[0] if latest_orphan_reports else None
+
+    if latest_orphan_report:
+        sample_orphan_url = (
+            f"/reports/orphan-ebs/"
+            f"{latest_orphan_report['project_id']}/"
+            f"?snapshot_date={latest_orphan_report['snapshot_date']}"
+        )
+    else:
+        sample_orphan_url = None
+
     context = {
         "total_jobs": total_jobs,
         "open_jobs": open_jobs,
@@ -55,7 +66,7 @@ def dashboard_view(request):
         "latest_orphan_reports": latest_orphan_reports,
         "recent_jobs": recent_jobs,
         "sample_financial_url": "/reports/financial/project/company-001-project-001/?year=2026&month=4",
-        "sample_orphan_url": "/reports/orphan-ebs/project-001/?snapshot_date=2026-04-08",
+        "sample_orphan_url": sample_orphan_url,
     }
     return render(request, "common/dashboard.html", context)
 
@@ -84,7 +95,6 @@ def orphan_report_detail_view(request, sample_row_id: int):
         company_id=sample_row.company_id,
         project_id=sample_row.project_id,
         snapshot_date=sample_row.snapshot_date,
-        generated_at=sample_row.generated_at,
     ).order_by("ranking_position", "volume_id")
 
     items = [

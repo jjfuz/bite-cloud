@@ -17,8 +17,18 @@ def _get_current_tenant_id(request) -> str:
     return request.headers.get("X-Tenant-Id", "tenant-demo")
 
 
-def _get_current_company_id(request) -> str:
-    return request.headers.get("X-Company-Id", "company-demo")
+def _infer_company_id_from_project_id(project_id: str) -> str:
+    parts = project_id.split("-")
+    if len(parts) >= 2:
+        return f"{parts[0]}-{parts[1]}"
+    return "company-demo"
+
+
+def _resolve_company_id(request, project_id: str) -> str:
+    return request.headers.get(
+        "X-Company-Id",
+        _infer_company_id_from_project_id(project_id),
+    )
 
 
 @require_GET
@@ -44,7 +54,7 @@ def get_financial_report_view(request, scope_type: str, scope_id: str):
 @require_GET
 def get_orphan_ebs_view(request, project_id: str):
     tenant_id = _get_current_tenant_id(request)
-    company_id = _get_current_company_id(request)
+    company_id = _resolve_company_id(request, project_id)
 
     snapshot_date_param = request.GET.get("snapshot_date")
     snapshot_date = date.fromisoformat(snapshot_date_param) if snapshot_date_param else date.today()

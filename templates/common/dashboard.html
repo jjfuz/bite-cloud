@@ -67,9 +67,13 @@
             <div class="link-row">
                 <a href="{{ sample_financial_url }}">Endpoint financiero de prueba</a>
             </div>
+
+            {% if sample_orphan_url %}
             <div class="link-row">
                 <a href="{{ sample_orphan_url }}">Endpoint orphan EBS de prueba</a>
             </div>
+            {% endif %}
+
             <div class="link-row">
                 <a href="/admin/jobs/scheduledjobexecution/">Admin Jobs</a>
             </div>
