@@ -3,6 +3,21 @@
 {% block title %}Dashboard | BITE Cloud{% endblock %}
 
 {% block content %}
+{% if dashboard_error_message %}
+<div class="alert bad">
+    <strong>Error:</strong> {{ dashboard_error_message }}
+</div>
+{% endif %}
+
+{% if report_service_status.status != "healthy" %}
+<div class="alert warn">
+    <strong>Atención:</strong> {{ report_service_status.message }}
+    {% if report_service_status.recovering_since %}
+        Recuperando desde {{ report_service_status.recovering_since }}.
+    {% endif %}
+</div>
+{% endif %}
+
 <div class="metric-grid">
     <div class="card">
         <div class="metric-title">Total Jobs</div>
