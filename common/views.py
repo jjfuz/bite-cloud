@@ -1,5 +1,7 @@
 import json
 
+from django.core.cache import cache
+from django.db import DatabaseError
 from django.db.models import Count, Max, Min
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
@@ -12,39 +14,77 @@ def _pretty_json(data) -> str:
     return json.dumps(data, indent=2, ensure_ascii=False, default=str)
 
 
+def _get_report_service_status():
+    recovering_since = cache.get('orphan_ebs_recovering')
+    if recovering_since:
+        return {
+            "status": "recovering",
+            "message": "El servicio de reportes se está recuperando de una falla.",
+            "recovering_since": recovering_since.isoformat(),
+        }
+    return {"status": "healthy"}
+
+
 def health_view(request):
     return JsonResponse({"status": "ok"}, status=200)
 
 
 def dashboard_view(request):
-    total_jobs = ScheduledJobExecution.objects.count()
-    open_jobs = ScheduledJobExecution.objects.filter(
-        status__in=["PENDING", "QUEUED", "RUNNING"]
-    ).count()
-    failed_jobs = ScheduledJobExecution.objects.filter(status="FAILED").count()
-    succeeded_jobs = ScheduledJobExecution.objects.filter(status="SUCCEEDED").count()
+    dashboard_error_message = None
+    total_jobs = 0
+    open_jobs = 0
+    failed_jobs = 0
+    succeeded_jobs = 0
+    latest_financial_snapshots = []
+    latest_orphan_reports = []
+    recent_jobs = []
+    sample_orphan_url = None
 
-    latest_financial_snapshots = FinancialReportSnapshot.objects.filter(
-        is_current=True
-    ).order_by("-generated_at")[:10]
+    try:
+        total_jobs = ScheduledJobExecution.objects.count()
+        open_jobs = ScheduledJobExecution.objects.filter(
+            status__in=["PENDING", "QUEUED", "RUNNING"]
+        ).count()
+        failed_jobs = ScheduledJobExecution.objects.filter(status="FAILED").count()
+        succeeded_jobs = ScheduledJobExecution.objects.filter(status="SUCCEEDED").count()
 
-    latest_orphan_reports = (
-        OrphanEBSSnapshot.objects.values(
-            "tenant_id",
-            "company_id",
-            "project_id",
-            "snapshot_date",
-            "generated_at",
+        latest_financial_snapshots = FinancialReportSnapshot.objects.filter(
+            is_current=True
+        ).order_by("-generated_at")[:10]
+
+        latest_orphan_reports = (
+            OrphanEBSSnapshot.objects.values(
+                "tenant_id",
+                "company_id",
+                "project_id",
+                "snapshot_date",
+                "generated_at",
+            )
+            .annotate(
+                total_orphan_volumes=Count("id"),
+                max_monthly_cost=Max("monthly_cost"),
+                sample_row_id=Min("id"),
+            )
+            .order_by("-generated_at")[:10]
         )
-        .annotate(
-            total_orphan_volumes=Count("id"),
-            max_monthly_cost=Max("monthly_cost"),
-            sample_row_id=Min("id"),
-        )
-        .order_by("-generated_at")[:10]
-    )
 
-    recent_jobs = ScheduledJobExecution.objects.order_by("-updated_at")[:15]
+        recent_jobs = ScheduledJobExecution.objects.order_by("-updated_at")[:15]
+
+        latest_orphan_report = latest_orphan_reports[0] if latest_orphan_reports else None
+
+        if latest_orphan_report:
+            sample_orphan_url = (
+                f"/reports/orphan-ebs/"
+                f"{latest_orphan_report['project_id']}/"
+                f"?snapshot_date={latest_orphan_report['snapshot_date']}"
+            )
+    except DatabaseError:
+        dashboard_error_message = (
+            "El dashboard no está disponible porque la base de datos no responde. "
+            "Verifique el estado del servicio y vuelva a intentar."
+        )
+
+    report_service_status = _get_report_service_status()
 
     context = {
         "total_jobs": total_jobs,
@@ -55,7 +95,9 @@ def dashboard_view(request):
         "latest_orphan_reports": latest_orphan_reports,
         "recent_jobs": recent_jobs,
         "sample_financial_url": "/reports/financial/project/company-001-project-001/?year=2026&month=4",
-        "sample_orphan_url": "/reports/orphan-ebs/project-001/?snapshot_date=2026-04-08",
+        "sample_orphan_url": sample_orphan_url,
+        "report_service_status": report_service_status,
+        "dashboard_error_message": dashboard_error_message,
     }
     return render(request, "common/dashboard.html", context)
 
@@ -84,7 +126,6 @@ def orphan_report_detail_view(request, sample_row_id: int):
         company_id=sample_row.company_id,
         project_id=sample_row.project_id,
         snapshot_date=sample_row.snapshot_date,
-        generated_at=sample_row.generated_at,
     ).order_by("ranking_position", "volume_id")
 
     items = [

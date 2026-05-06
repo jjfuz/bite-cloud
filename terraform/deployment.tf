@@ -206,6 +206,16 @@ data "aws_subnets" "default" {
     name   = "vpc-id"
     values = [data.aws_vpc.default.id]
   }
+  filter {
+    name   = "availability-zone"
+    values = [
+      "us-east-1a",
+      "us-east-1b",
+      "us-east-1c",
+      "us-east-1d",
+      "us-east-1f"
+    ]
+  }
 }
 
 data "aws_ami" "ubuntu" {
@@ -404,6 +414,8 @@ resource "aws_lb_target_group" "tg_backend_reportes" {
   port     = 8000
   protocol = "HTTP"
   vpc_id   = local.active_vpc_id
+
+  load_balancing_algorithm_type = "least_outstanding_requests"
 
   health_check {
     enabled             = true
@@ -626,7 +638,7 @@ resource "aws_instance" "manejador_reportes" {
               WorkingDirectory=${local.app_dir}
               EnvironmentFile=${local.app_dir}/.env
               Environment=PYTHONUNBUFFERED=1
-              ExecStart=${local.app_dir}/.venv/bin/gunicorn monitoring.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --access-logfile - --error-logfile -
+              ExecStart=${local.app_dir}/.venv/bin/gunicorn monitoring.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
               Restart=always
               RestartSec=5
 
