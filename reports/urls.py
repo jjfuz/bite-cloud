@@ -13,4 +13,9 @@ urlpatterns = [
         views.get_orphan_ebs_view,
         name="get_orphan_ebs",
     ),
+    path(
+        "status/",
+        views.get_reports_status_view,
+        name="get_reports_status",
+    ),
 ]
