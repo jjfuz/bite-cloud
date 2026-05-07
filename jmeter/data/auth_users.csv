@@ -1,0 +1,2 @@
+username,password,expected_company_id,authorized_scope_id,unauthorized_scope_id,authorized_job_id,unauthorized_job_id
+viewer,secret,company-001,company-001-project-001,company-002-project-001,1,2
