@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "jobs",
     "cloud",
     "common",
+    "social_django",
 ]
 
 MIDDLEWARE = [
@@ -59,6 +60,8 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "social_django.context_processors.backends",
+                "social_django.context_processors.login_redirect",
             ],
         },
     },
@@ -151,7 +154,31 @@ CLOUD_EXPERIMENT_CONFIG = {
 USE_FAKE_BROKER = os.getenv("USE_FAKE_BROKER", "False") == "True"
 USE_FAKE_CLOUD_DATA = os.getenv("USE_FAKE_CLOUD_DATA", "False") == "True"
 
-LOGIN_URL = "/accounts/login/"
-LOGIN_REDIRECT_URL = "/"
+# ------------------------------------------------------------------
+# Auth0 / Social Auth
+# ------------------------------------------------------------------
+
+SOCIAL_AUTH_AUTH0_DOMAIN = os.getenv("SOCIAL_AUTH_AUTH0_DOMAIN", "")
+SOCIAL_AUTH_AUTH0_KEY = os.getenv("SOCIAL_AUTH_AUTH0_KEY", "")
+SOCIAL_AUTH_AUTH0_SECRET = os.getenv("SOCIAL_AUTH_AUTH0_SECRET", "")
+SOCIAL_AUTH_AUTH0_SCOPE = ["openid", "profile", "email"]
+SOCIAL_AUTH_TRAILING_SLASH = False
+
+APP_BASE_URL = os.getenv("APP_BASE_URL", "http://localhost:8000")
+
+if SOCIAL_AUTH_AUTH0_DOMAIN:
+    LOGIN_URL = "/login/auth0"
+    LOGIN_REDIRECT_URL = "/"
+    LOGOUT_REDIRECT_URL = (
+        f"https://{SOCIAL_AUTH_AUTH0_DOMAIN}/v2/logout"
+        f"?returnTo={APP_BASE_URL}"
+    )
+    AUTHENTICATION_BACKENDS = [
+        "monitoring.auth0backend.Auth0",
+        "django.contrib.auth.backends.ModelBackend",
+    ]
+else:
+    LOGIN_URL = "/accounts/login/"
+    LOGIN_REDIRECT_URL = "/"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

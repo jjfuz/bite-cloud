@@ -167,6 +167,26 @@ variable "scheduler_interval_seconds" {
   default     = 30
 }
 
+variable "auth0_domain" {
+  description = "Auth0 tenant domain (e.g. dev-xxx.us.auth0.com). Leave empty to disable Auth0."
+  type        = string
+  default     = ""
+}
+
+variable "auth0_client_id" {
+  description = "Auth0 application Client ID"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "auth0_client_secret" {
+  description = "Auth0 application Client Secret"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # ------------------------------------------------------------------
 # Provider
 # ------------------------------------------------------------------
@@ -623,6 +643,11 @@ resource "aws_instance" "manejador_reportes" {
 
               USE_FAKE_BROKER=False
               USE_FAKE_CLOUD_DATA=False
+
+              SOCIAL_AUTH_AUTH0_DOMAIN=${var.auth0_domain}
+              SOCIAL_AUTH_AUTH0_KEY=${var.auth0_client_id}
+              SOCIAL_AUTH_AUTH0_SECRET=${var.auth0_client_secret}
+              APP_BASE_URL=http://${aws_lb.alb_reportes.dns_name}
               EOF
 
               chown ubuntu:ubuntu ${local.app_dir}/.env

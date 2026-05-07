@@ -4,3 +4,8 @@ __pycache__/
 db.sqlite3
 .env
 .vscode/
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfplan

@@ -15,57 +15,86 @@
       color: #102a43;
     }
     .card {
-      width: min(420px, 92vw);
+      width: min(440px, 92vw);
       background: #fff;
       border-radius: 14px;
       box-shadow: 0 20px 50px rgba(16, 42, 67, 0.15);
-      padding: 28px;
+      padding: 32px 28px;
     }
-    h1 {
-      margin: 0 0 4px;
-      font-size: 1.4rem;
+    h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    .subtitle { margin: 0 0 24px; color: #486581; font-size: 0.95rem; }
+    .btn-auth0 {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 13px;
+      border: none;
+      border-radius: 8px;
+      background: #eb5424;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      box-sizing: border-box;
     }
-    p {
-      margin: 0 0 18px;
-      color: #486581;
+    .btn-auth0:hover { background: #cf4519; }
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0;
+      color: #829ab1;
+      font-size: 0.85rem;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: #d9e2ec;
+    }
+    label { display: block; margin: 10px 0 5px; font-weight: 600; font-size: 0.88rem; }
+    input[type=text], input[type=password] {
+      width: 100%;
+      border: 1px solid #bcccdc;
+      border-radius: 8px;
+      padding: 9px 10px;
+      box-sizing: border-box;
       font-size: 0.95rem;
     }
-    label {
-      display: block;
-      margin: 10px 0 6px;
-      font-weight: 600;
-      font-size: 0.9rem;
-    }
-    input {
+    .btn-local {
+      margin-top: 14px;
       width: 100%;
       border: 1px solid #bcccdc;
       border-radius: 8px;
       padding: 10px;
-      box-sizing: border-box;
-    }
-    button {
-      margin-top: 16px;
-      width: 100%;
-      border: none;
-      border-radius: 8px;
-      padding: 11px;
-      background: #1f7a8c;
-      color: #fff;
+      background: #fff;
+      color: #334e68;
       font-weight: 600;
       cursor: pointer;
     }
-    .errorlist {
-      color: #b42318;
-      margin: 0 0 10px;
-      padding-left: 20px;
-      font-size: 0.9rem;
-    }
+    .btn-local:hover { background: #f0f4f8; }
+    .errorlist { color: #b42318; margin: 0 0 10px; padding-left: 18px; font-size: 0.88rem; }
+    .note { margin-top: 16px; font-size: 0.8rem; color: #829ab1; text-align: center; }
   </style>
 </head>
 <body>
   <section class="card">
-    <h1>Ingreso al dashboard</h1>
-    <p>Autenticate para acceder a reportes y analitica de tu empresa.</p>
+    <h1>BITE Cloud</h1>
+    <p class="subtitle">Inicia sesion para acceder a reportes y analitica de tu empresa.</p>
+
+    <a href="/login/auth0{% if next %}?next={{ next }}{% endif %}" class="btn-auth0">
+      <svg width="20" height="20" viewBox="0 0 50 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="25" cy="25" r="25" fill="white" fill-opacity="0.25"/>
+        <text x="25" y="33" text-anchor="middle" font-size="22" fill="white" font-family="sans-serif" font-weight="bold">A</text>
+      </svg>
+      Continuar con Auth0
+    </a>
+
+    <div class="divider">o acceso de administrador</div>
+
     <form method="post">
       {% csrf_token %}
       {{ form.non_field_errors }}
@@ -74,8 +103,10 @@
       <label for="id_password">Contrasena</label>
       {{ form.password }}
       <input type="hidden" name="next" value="{{ next }}">
-      <button type="submit">Entrar</button>
+      <button type="submit" class="btn-local">Entrar con cuenta local</button>
     </form>
+
+    <p class="note">El acceso local es solo para administradores del sistema.</p>
   </section>
 </body>
 </html>
