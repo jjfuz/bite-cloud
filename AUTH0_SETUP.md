@@ -1,17 +1,18 @@
-# Configuración de Auth0 para BITE Cloud
+## Configuración de Auth0 para BITE Cloud
 
-Este documento explica cómo cada integrante del equipo debe configurar su propia cuenta de Auth0 para desplegar la aplicación con autenticación.
+Este documento explica cómo desplegar BITE Cloud con Auth0 sin tener que entrar a corregir las EC2 a mano después del `terraform apply`.
 
 ---
 
 ## Requisitos previos
 
 - Tener una cuenta de AWS con acceso al laboratorio.
-- Haber hecho `terraform apply` al menos una vez para tener el ALB levantado y conocer su DNS.
+- Haber hecho `terraform apply` o estar listo para hacerlo con variables de Auth0.
 - El DNS del ALB lo obtienes del output de Terraform:
   ```
   alb_reportes_dns = "reportes-alb-XXXXXXXXX.us-east-1.elb.amazonaws.com"
   ```
+- La rama a desplegar es `auth0`, no `main`.
 
 ---
 
@@ -72,15 +73,14 @@ Auth0 no incluye el `app_metadata` del usuario en el token por defecto. Hay que 
 ```javascript
 exports.onExecutePostLogin = async (event, api) => {
   const namespace = 'TU_DOMINIO';
-  if (event.user.app_metadata) {
-    api.accessToken.setCustomClaim(
-      `${namespace}/tenant_id`,
-      event.user.app_metadata.tenant_id
-    );
-    api.accessToken.setCustomClaim(
-      `${namespace}/company_id`,
-      event.user.app_metadata.company_id
-    );
+  const tenantId = event.user.app_metadata?.tenant_id;
+  const companyId = event.user.app_metadata?.company_id;
+
+  if (tenantId && companyId) {
+    api.accessToken.setCustomClaim(`${namespace}/tenant_id`, tenantId);
+    api.accessToken.setCustomClaim(`${namespace}/company_id`, companyId);
+    api.idToken.setCustomClaim(`${namespace}/tenant_id`, tenantId);
+    api.idToken.setCustomClaim(`${namespace}/company_id`, companyId);
   }
 };
 ```
@@ -95,6 +95,25 @@ exports.onExecutePostLogin = async (event, api) => {
 ## Paso 5 – Crear usuarios en Auth0
 
 Los usuarios de Auth0 representan a las personas que acceden al dashboard. Cada usuario debe estar asociado a una empresa (`company_id`) que exista en la base de datos.
+
+### Qué valores sí funcionan con los datos sembrados
+
+Si desplegaste con el Terraform del repo, los datos sembrados y los jobs automáticos usan estos valores:
+
+- `tenant_id = tenant-demo`
+- `company_id = company-001` hasta `company-050` para costos/reportes
+- el scheduler genera jobs para `company-001` hasta `company-039`
+
+Si quieres ver datos reales de una vez, empieza con:
+
+```json
+{
+  "tenant_id": "tenant-demo",
+  "company_id": "company-001"
+}
+```
+
+No uses el dominio de Auth0 como `tenant_id` de negocio. El dominio solo se usa como namespace del claim.
 
 ### Cómo ver las empresas disponibles en la BD
 
@@ -143,6 +162,7 @@ Crea el archivo `terraform/terraform.tfvars` en tu máquina local con tus creden
 
 ```hcl
 # terraform/terraform.tfvars
+repo_branch         = "auth0"
 auth0_domain        = "dev-XXXXXXXX.us.auth0.com"
 auth0_client_id     = "TU_CLIENT_ID"
 auth0_client_secret = "TU_CLIENT_SECRET"
@@ -157,6 +177,18 @@ terraform apply
 ```
 
 Terraform inyecta esas variables automáticamente al `.env` de las EC2 y el `APP_BASE_URL` se resuelve solo con el DNS del ALB.
+
+No hace falta entrar por SSH a las instancias para crear `.env` manualmente cuando el despliegue se hace con Terraform y estas variables.
+
+### Si ya tenías instancias levantadas antes del cambio
+
+Si las EC2 ya existían y estaban corriendo una versión vieja:
+
+1. actualiza la rama desplegada a `auth0`
+2. corre `terraform apply` otra vez
+3. verifica que ambas instancias queden con la misma versión
+
+Evita mezclar una instancia en `main` y otra en `auth0`, porque el ALB te va a alternar entre comportamientos distintos.
 
 > **Alternativa sin archivo tfvars** (si prefieres pasar las variables directo):
 > ```bash
@@ -175,6 +207,14 @@ Terraform inyecta esas variables automáticamente al `.env` de las EC2 y el `APP
 3. Al hacer click, te redirige al login de Auth0
 4. Ingresa con un usuario que hayas creado en el Paso 5
 5. Después del login debes volver al dashboard y ver solo los datos de la empresa asignada al usuario
+6. Si usaste `tenant-demo` + `company-001`, debes poder ver reportes y también jobs de esa compañía cuando el scheduler ya haya corrido
+
+### Aclaración sobre jobs
+
+- Los jobs no aparecen por autenticarse; aparecen cuando el scheduler crea ejecuciones para esa compañía.
+- En este repo, el scheduler corre en la instancia `reportes-manejador-reportes-1`.
+- Si acabas de desplegar, espera al menos un ciclo del timer del scheduler.
+- Con la configuración por defecto del Terraform, los jobs válidos quedan bajo `tenant-demo` y compañías `company-001` a `company-039`.
 
 ### Pruebas de aislamiento
 
@@ -192,6 +232,8 @@ Terraform inyecta esas variables automáticamente al `.env` de las EC2 y el `APP
 | `auth0_client_id` | Auth0 Dashboard → Applications → tu app → Settings → **Client ID** |
 | `auth0_client_secret` | Auth0 Dashboard → Applications → tu app → Settings → **Client Secret** |
 | `APP_BASE_URL` | Output de Terraform: `alb_reportes_dns` (se configura automáticamente) |
+| `tenant_id` para pruebas reales | Usa `tenant-demo` |
+| `company_id` para pruebas reales | Usa `company-001` a `company-039` si quieres ver jobs; `company-001` a `company-050` para datos sembrados |
 
 ---
 
@@ -206,3 +248,16 @@ terraform/*.tfstate
 terraform/*.tfstate.backup
 .env
 ```
+
+---
+
+## Recomendación operativa
+
+Para despliegues nuevos, la ruta correcta es:
+
+1. configurar Auth0
+2. crear `terraform.tfvars`
+3. correr `terraform apply`
+4. probar login por el ALB
+
+No uses `nano .env` en las EC2 salvo para recuperación o troubleshooting de instancias ya creadas antes del cambio.

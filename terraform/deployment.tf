@@ -89,7 +89,19 @@ variable "repo_url" {
 variable "repo_branch" {
   description = "Git branch to deploy"
   type        = string
-  default     = "main"
+  default     = "auth0"
+}
+
+variable "alb_stickiness_enabled" {
+  description = "Enable ALB target group stickiness to keep the Auth0 callback on the same node during login"
+  type        = bool
+  default     = true
+}
+
+variable "alb_stickiness_cookie_duration" {
+  description = "Duration in seconds for the ALB stickiness cookie"
+  type        = number
+  default     = 300
 }
 
 variable "app_instance_type" {
@@ -448,6 +460,12 @@ resource "aws_lb_target_group" "tg_backend_reportes" {
     timeout             = 5
   }
 
+  stickiness {
+    enabled         = var.alb_stickiness_enabled
+    type            = "lb_cookie"
+    cookie_duration = var.alb_stickiness_cookie_duration
+  }
+
   tags = merge(local.common_tags, {
     Name = "${var.project_prefix}-tg-reportes"
   })
@@ -663,7 +681,7 @@ resource "aws_instance" "manejador_reportes" {
               WorkingDirectory=${local.app_dir}
               EnvironmentFile=${local.app_dir}/.env
               Environment=PYTHONUNBUFFERED=1
-              ExecStart=${local.app_dir}/.venv/bin/gunicorn monitoring.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
+              ExecStart=${local.app_dir}/.venv/bin/gunicorn monitoring.wsgi:application --chdir ${local.app_dir} --bind 0.0.0.0:8000 --workers 4 --timeout 120 --access-logfile - --error-logfile -
               Restart=always
               RestartSec=5
 
