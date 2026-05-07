@@ -7,6 +7,7 @@ from reports.models import FinancialReportSnapshot
 
 def get_financial_report_snapshot(
     tenant_id: str,
+    company_id: str,
     scope_type: str,
     scope_id: str,
     period_year: int,
@@ -15,6 +16,7 @@ def get_financial_report_snapshot(
     try:
         return FinancialReportSnapshot.objects.get(
             tenant_id=tenant_id,
+            company_id=company_id,
             scope_type=scope_type,
             scope_id=scope_id,
             period_year=period_year,

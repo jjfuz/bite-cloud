@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BITE Cloud | Login</title>
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(120deg, #edf5ff, #f6f8fb);
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      color: #102a43;
+    }
+    .card {
+      width: min(420px, 92vw);
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 20px 50px rgba(16, 42, 67, 0.15);
+      padding: 28px;
+    }
+    h1 {
+      margin: 0 0 4px;
+      font-size: 1.4rem;
+    }
+    p {
+      margin: 0 0 18px;
+      color: #486581;
+      font-size: 0.95rem;
+    }
+    label {
+      display: block;
+      margin: 10px 0 6px;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+    input {
+      width: 100%;
+      border: 1px solid #bcccdc;
+      border-radius: 8px;
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 16px;
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      background: #1f7a8c;
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .errorlist {
+      color: #b42318;
+      margin: 0 0 10px;
+      padding-left: 20px;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <section class="card">
+    <h1>Ingreso al dashboard</h1>
+    <p>Autenticate para acceder a reportes y analitica de tu empresa.</p>
+    <form method="post">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <label for="id_username">Usuario</label>
+      {{ form.username }}
+      <label for="id_password">Contrasena</label>
+      {{ form.password }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <button type="submit">Entrar</button>
+    </form>
+  </section>
+</body>
+</html>

@@ -13,6 +13,7 @@ from common.views import (
 urlpatterns = [
     path("", dashboard_view, name="dashboard"),
     path("health/", health_view, name="health"),
+    path("accounts/", include("django.contrib.auth.urls")),
     path("admin/", admin.site.urls),
     path("reports/", include("reports.urls")), ### ESTOS SON LOS ENDPOINTS JSON 
     

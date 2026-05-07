@@ -6,6 +6,7 @@ from django.db.models import Count, Max, Min
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, render
 
+from common.auth import get_request_scope
 from jobs.models import ScheduledJobExecution
 from reports.models import FinancialReportSnapshot, OrphanEBSSnapshot
 
@@ -41,19 +42,32 @@ def dashboard_view(request):
     sample_orphan_url = None
 
     try:
-        total_jobs = ScheduledJobExecution.objects.count()
-        open_jobs = ScheduledJobExecution.objects.filter(
+        scope = get_request_scope(request)
+        jobs_qs = ScheduledJobExecution.objects.filter(
+            tenant_id=scope.tenant_id,
+            company_id=scope.company_id,
+        )
+        financial_qs = FinancialReportSnapshot.objects.filter(
+            tenant_id=scope.tenant_id,
+            company_id=scope.company_id,
+            is_current=True,
+        )
+        orphan_qs = OrphanEBSSnapshot.objects.filter(
+            tenant_id=scope.tenant_id,
+            company_id=scope.company_id,
+        )
+
+        total_jobs = jobs_qs.count()
+        open_jobs = jobs_qs.filter(
             status__in=["PENDING", "QUEUED", "RUNNING"]
         ).count()
-        failed_jobs = ScheduledJobExecution.objects.filter(status="FAILED").count()
-        succeeded_jobs = ScheduledJobExecution.objects.filter(status="SUCCEEDED").count()
+        failed_jobs = jobs_qs.filter(status="FAILED").count()
+        succeeded_jobs = jobs_qs.filter(status="SUCCEEDED").count()
 
-        latest_financial_snapshots = FinancialReportSnapshot.objects.filter(
-            is_current=True
-        ).order_by("-generated_at")[:10]
+        latest_financial_snapshots = financial_qs.order_by("-generated_at")[:10]
 
         latest_orphan_reports = (
-            OrphanEBSSnapshot.objects.values(
+            orphan_qs.values(
                 "tenant_id",
                 "company_id",
                 "project_id",
@@ -68,7 +82,7 @@ def dashboard_view(request):
             .order_by("-generated_at")[:10]
         )
 
-        recent_jobs = ScheduledJobExecution.objects.order_by("-updated_at")[:15]
+        recent_jobs = jobs_qs.order_by("-updated_at")[:15]
 
         latest_orphan_report = latest_orphan_reports[0] if latest_orphan_reports else None
 
@@ -103,7 +117,13 @@ def dashboard_view(request):
 
 
 def financial_snapshot_detail_view(request, snapshot_id: int):
-    snapshot = get_object_or_404(FinancialReportSnapshot, id=snapshot_id)
+    scope = get_request_scope(request)
+    snapshot = get_object_or_404(
+        FinancialReportSnapshot,
+        id=snapshot_id,
+        tenant_id=scope.tenant_id,
+        company_id=scope.company_id,
+    )
 
     payload = snapshot.report_payload or {}
     breakdown = payload.get("breakdown", [])
@@ -119,7 +139,13 @@ def financial_snapshot_detail_view(request, snapshot_id: int):
 
 
 def orphan_report_detail_view(request, sample_row_id: int):
-    sample_row = get_object_or_404(OrphanEBSSnapshot, id=sample_row_id)
+    scope = get_request_scope(request)
+    sample_row = get_object_or_404(
+        OrphanEBSSnapshot,
+        id=sample_row_id,
+        tenant_id=scope.tenant_id,
+        company_id=scope.company_id,
+    )
 
     rows = OrphanEBSSnapshot.objects.filter(
         tenant_id=sample_row.tenant_id,
@@ -152,7 +178,13 @@ def orphan_report_detail_view(request, sample_row_id: int):
 
 
 def job_detail_view(request, job_id: int):
-    job = get_object_or_404(ScheduledJobExecution, id=job_id)
+    scope = get_request_scope(request)
+    job = get_object_or_404(
+        ScheduledJobExecution,
+        id=job_id,
+        tenant_id=scope.tenant_id,
+        company_id=scope.company_id,
+    )
 
     context = {
         "job": job,

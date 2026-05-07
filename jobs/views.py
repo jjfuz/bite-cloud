@@ -2,6 +2,7 @@ from django.shortcuts import render
 
 # Create your views here.
 from django.http import JsonResponse
+from common.auth import get_request_scope
 from .models import ScheduledJobExecution
 
 def job_detail_api(request, job_id):
@@ -9,7 +10,12 @@ def job_detail_api(request, job_id):
         return JsonResponse({"error": "Method not allowed"}, status=405)
 
     try:
-        job = ScheduledJobExecution.objects.get(id=job_id)
+        scope = get_request_scope(request)
+        job = ScheduledJobExecution.objects.get(
+            id=job_id,
+            tenant_id=scope.tenant_id,
+            company_id=scope.company_id,
+        )
 
         data = {
             "id": job.id,
