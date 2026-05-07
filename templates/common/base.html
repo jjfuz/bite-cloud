@@ -60,6 +60,7 @@
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
+            align-items: center;
         }
 
         .nav a,
@@ -73,6 +74,22 @@
             border: 1px solid var(--line);
             box-shadow: var(--shadow);
             font-weight: 600;
+        }
+
+        .nav form {
+            margin: 0;
+        }
+
+        .btn-danger {
+            color: #991b1b;
+            background: #fff5f5;
+            border-color: #fecaca;
+            cursor: pointer;
+        }
+
+        .btn-danger:hover {
+            background: #fee2e2;
+            border-color: #fca5a5;
         }
 
         .nav a:hover,
@@ -299,6 +316,12 @@
                 <a href="/">Dashboard</a>
                 <a href="/admin/">Admin</a>
                 <a href="/health/">Health</a>
+                {% if user.is_authenticated %}
+                <form method="post" action="/accounts/logout/">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Cerrar sesion</button>
+                </form>
+                {% endif %}
             </div>
         </div>
 
