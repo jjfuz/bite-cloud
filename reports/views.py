@@ -73,7 +73,7 @@ def get_orphan_ebs_view(request, project_id: str):
     except Exception as e:
         if not cache.get('orphan_ebs_recovering'):
             cache.set('orphan_ebs_recovering', timezone.now())
-        return JsonResponse({"error": "El servicio de reportes se está recuperando de una falla."}, status=503)
+        return JsonResponse({"error": "El servicio de reportes se está recuperando de una falla en la base de datos."}, status=503)
         
 
 
@@ -83,7 +83,7 @@ def get_reports_status_view(request):
     if recovering_since:
         return JsonResponse({
             "status": "recovering",
-            "message": "El servicio de reportes se está recuperando de una falla.",
+            "message": "El servicio de reportes se está recuperando de una falla en la base de datos.",
             "recovering_since": recovering_since.isoformat()
         }, status=503)
     else:

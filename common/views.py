@@ -19,7 +19,7 @@ def _get_report_service_status():
     if recovering_since:
         return {
             "status": "recovering",
-            "message": "El servicio de reportes se está recuperando de una falla.",
+            "message": "El servicio de reportes se está recuperando de una falla en la base de datos.",
             "recovering_since": recovering_since.isoformat(),
         }
     return {"status": "healthy"}
