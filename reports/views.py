@@ -1,6 +1,7 @@
 from datetime import date
 
 from django.core.cache import cache
+from django.db import DatabaseError
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.http import require_GET
@@ -69,11 +70,17 @@ def get_orphan_ebs_view(request, project_id: str):
             snapshot_date=snapshot_date,
         )
         cache.delete('orphan_ebs_recovering')
+        cache.delete('failure_reason')
         return JsonResponse(serialize_orphan_ebs_snapshot(records), status=200)
     except Exception as e:
         if not cache.get('orphan_ebs_recovering'):
             cache.set('orphan_ebs_recovering', timezone.now())
-        return JsonResponse({"error": "El servicio de reportes se está recuperando de una falla."}, status=503)
+            if isinstance(e, DatabaseError):
+                cache.set('failure_reason', 'la base de datos')
+            else:
+                cache.set('failure_reason', 'los manejadores de reportes')
+        failure_reason = cache.get('failure_reason', 'desconocida')
+        return JsonResponse({"error": f"El servicio de reportes se está recuperando de una falla en {failure_reason}."}, status=503)
         
 
 
@@ -81,9 +88,10 @@ def get_orphan_ebs_view(request, project_id: str):
 def get_reports_status_view(request):
     recovering_since = cache.get('orphan_ebs_recovering')
     if recovering_since:
+        failure_reason = cache.get('failure_reason', 'desconocida')
         return JsonResponse({
             "status": "recovering",
-            "message": "El servicio de reportes se está recuperando de una falla.",
+            "message": f"El servicio de reportes se está recuperando de una falla en {failure_reason}.",
             "recovering_since": recovering_since.isoformat()
         }, status=503)
     else:

@@ -17,9 +17,10 @@ def _pretty_json(data) -> str:
 def _get_report_service_status():
     recovering_since = cache.get('orphan_ebs_recovering')
     if recovering_since:
+        failure_reason = cache.get('failure_reason', 'desconocida')
         return {
             "status": "recovering",
-            "message": "El servicio de reportes se está recuperando de una falla.",
+            "message": f"El servicio de reportes se está recuperando de una falla en {failure_reason}.",
             "recovering_since": recovering_since.isoformat(),
         }
     return {"status": "healthy"}
@@ -80,7 +81,7 @@ def dashboard_view(request):
             )
     except DatabaseError:
         dashboard_error_message = (
-            "El dashboard no está disponible porque la base de datos no responde. "
+            "El dashboard no está disponible porque la causa de la falla es la base de datos. "
             "Verifique el estado del servicio y vuelva a intentar."
         )
 
